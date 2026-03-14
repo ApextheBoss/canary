@@ -268,7 +268,7 @@ Edit `prompts.json`:
 - [x] Web dashboard (FastAPI + Chart.js)
 - [x] Webhook alerts (Slack, Discord, generic JSON)
 - [ ] More test categories (safety, multilingual, RAG)
-- [ ] Cost tracking per provider
+- [x] Cost tracking per provider
 - [ ] Weekly quality report generator
 
 ---

@@ -20,6 +20,14 @@ PROMPTS_PATH = Path(__file__).parent / "prompts.json"
 def init_db():
     """Create tables if they don't exist."""
     conn = sqlite3.connect(DB_PATH)
+    # Migrate: add cost_usd column if missing
+    try:
+        conn.execute("SELECT cost_usd FROM runs LIMIT 1")
+    except sqlite3.OperationalError:
+        try:
+            conn.execute("ALTER TABLE runs ADD COLUMN cost_usd REAL")
+        except sqlite3.OperationalError:
+            pass  # table doesn't exist yet, will be created below
     conn.execute("""
         CREATE TABLE IF NOT EXISTS runs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +41,8 @@ def init_db():
             score INTEGER NOT NULL,
             latency_ms INTEGER NOT NULL,
             scoring_details TEXT,
-            error TEXT
+            error TEXT,
+            cost_usd REAL
         )
     """)
     conn.execute("""
@@ -119,7 +128,7 @@ def call_google(url, api_key, prompt):
 
 
 def call_openrouter(model, api_key, prompt):
-    """Call OpenRouter API (routes to any provider)."""
+    """Call OpenRouter API (routes to any provider). Returns (text, latency, cost)."""
     payload = json.dumps({
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
@@ -139,7 +148,19 @@ def call_openrouter(model, api_key, prompt):
     latency = int((time.time() - start) * 1000)
     data = json.loads(resp.read())
     text = data["choices"][0]["message"]["content"]
-    return text, latency
+    # Extract cost from OpenRouter usage data
+    cost = None
+    usage = data.get("usage", {})
+    if usage:
+        # OpenRouter includes total_cost in some responses
+        cost = usage.get("total_cost") or data.get("usage", {}).get("cost")
+        if cost is None:
+            # Estimate from prompt/completion tokens if pricing known
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+            # Store token counts for cost estimation later
+            cost = {"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens}
+    return text, latency, cost
 
 
 def call_provider(provider_id, prompt):
@@ -149,12 +170,12 @@ def call_provider(provider_id, prompt):
     if openrouter_key and "/" in provider_id:
         # Use OpenRouter for any model ID (it routes to all providers)
         try:
-            text, latency = call_openrouter(provider_id, openrouter_key, prompt)
-            return text, latency, None
+            text, latency, cost = call_openrouter(provider_id, openrouter_key, prompt)
+            return text, latency, None, cost
         except HTTPError as e:
-            return None, 0, f"HTTP {e.code}: {e.read().decode()[:200]}"
+            return None, 0, f"HTTP {e.code}: {e.read().decode()[:200]}", None
         except Exception as e:
-            return None, 0, str(e)[:200]
+            return None, 0, str(e)[:200], None
     
     # Legacy direct API calls (kept for backward compatibility)
     cfg = PROVIDERS.get(provider_id)
@@ -172,11 +193,11 @@ def call_provider(provider_id, prompt):
             text, latency = call_google(cfg["url"], api_key, prompt)
         else:
             text, latency = call_openai(cfg["url"], cfg["model"], api_key, prompt)
-        return text, latency, None
+        return text, latency, None, None
     except HTTPError as e:
-        return None, 0, f"HTTP {e.code}: {e.read().decode()[:200]}"
+        return None, 0, f"HTTP {e.code}: {e.read().decode()[:200]}", None
     except Exception as e:
-        return None, 0, str(e)[:200]
+        return None, 0, str(e)[:200], None
 
 
 def score_exact_answer(response, expected):
@@ -352,7 +373,16 @@ def run_tests(providers=None, prompts=None):
             pid = prompt_data["id"]
             print(f"  [{current}/{total}] {pid}...", end=" ", flush=True)
             
-            response, latency, error = call_provider(provider_id, prompt_data["prompt"])
+            response, latency, error, cost_info = call_provider(provider_id, prompt_data["prompt"])
+            
+            # Extract cost as float USD
+            cost_usd = None
+            if cost_info is not None:
+                if isinstance(cost_info, (int, float)):
+                    cost_usd = float(cost_info)
+                elif isinstance(cost_info, dict):
+                    # Token counts only — store as None for now (no pricing table)
+                    cost_usd = None
             
             if error:
                 score = 0
@@ -361,14 +391,15 @@ def run_tests(providers=None, prompts=None):
                 print(f"ERROR: {error[:50]}")
             else:
                 score, scoring_details = score_response(prompt_data, response)
-                print(f"score={score} ({scoring_details[:40]}) {latency}ms")
+                cost_str = f" ${cost_usd:.6f}" if cost_usd else ""
+                print(f"score={score} ({scoring_details[:40]}) {latency}ms{cost_str}")
             
             conn.execute("""
-                INSERT INTO runs (run_id, timestamp, provider, prompt_id, category, prompt, response, score, latency_ms, scoring_details, error)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO runs (run_id, timestamp, provider, prompt_id, category, prompt, response, score, latency_ms, scoring_details, error, cost_usd)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (run_id, timestamp, provider_id, pid, prompt_data["category"],
                   prompt_data["prompt"], response or "", score, latency,
-                  scoring_details, error))
+                  scoring_details, error, cost_usd))
             
             results.append({
                 "provider": provider_id,
@@ -377,6 +408,7 @@ def run_tests(providers=None, prompts=None):
                 "score": score,
                 "latency_ms": latency,
                 "error": error,
+                "cost_usd": cost_usd,
             })
     
     conn.commit()
@@ -409,7 +441,9 @@ def run_tests(providers=None, prompts=None):
             avg = sum(r["score"] for r in pr) / len(pr)
             avg_lat = sum(r["latency_ms"] for r in pr) / len(pr) if any(r["latency_ms"] for r in pr) else 0
             errors = sum(1 for r in pr if r["error"])
-            print(f"  {provider_id}: avg_score={avg:.1f} avg_latency={avg_lat:.0f}ms errors={errors}")
+            total_cost = sum(r.get("cost_usd") or 0 for r in pr)
+            cost_str = f" cost=${total_cost:.4f}" if total_cost > 0 else ""
+            print(f"  {provider_id}: avg_score={avg:.1f} avg_latency={avg_lat:.0f}ms errors={errors}{cost_str}")
     
     conn.close()
     return results

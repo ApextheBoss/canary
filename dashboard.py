@@ -111,6 +111,28 @@ def api_latest_runs(limit: int = 50):
     return [dict(r) for r in rows]
 
 
+@app.get("/api/costs")
+def api_costs(days: int = 30):
+    """Cost per provider per day (aggregated from runs with cost_usd)."""
+    conn = get_db()
+    try:
+        rows = conn.execute("""
+            SELECT date(timestamp) as date, provider,
+                   SUM(cost_usd) as total_cost,
+                   COUNT(*) as num_calls
+            FROM runs
+            WHERE cost_usd IS NOT NULL
+              AND date(timestamp) >= date('now', ?)
+            GROUP BY date(timestamp), provider
+            ORDER BY date, provider
+        """, (f"-{days} days",)).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception:
+        conn.close()
+        return []
+
+
 # ── HTML Dashboard ─────────────────────────────────────────
 
 
@@ -178,10 +200,11 @@ function scoreClass(score) {
 }
 
 async function load() {
-  const [summary, history, drift] = await Promise.all([
+  const [summary, history, drift, costs] = await Promise.all([
     fetch('/api/summary').then(r=>r.json()),
     fetch('/api/history?days=30').then(r=>r.json()),
     fetch('/api/drift').then(r=>r.json()),
+    fetch('/api/costs?days=30').then(r=>r.json()),
   ]);
 
   if (!summary.length && !history.length) {
@@ -236,6 +259,26 @@ async function load() {
 
   // Category breakdown chart
   html += `<div class="chart-container"><h2>Latest Scores by Category</h2><canvas id="categoryChart"></canvas></div>`;
+
+  // Cost tracking section
+  if (costs && costs.length) {
+    const costByProvider = {};
+    for (const c of costs) {
+      if (!costByProvider[c.provider]) costByProvider[c.provider] = 0;
+      costByProvider[c.provider] += c.total_cost;
+    }
+    html += '<div class="chart-container"><h2>💰 Cost Tracking (30 days)</h2><table>';
+    html += '<thead><tr><th>Provider</th><th>Total Cost</th><th>API Calls</th><th>Avg $/call</th></tr></thead><tbody>';
+    const totalCalls = {};
+    for (const c of costs) {
+      totalCalls[c.provider] = (totalCalls[c.provider] || 0) + c.num_calls;
+    }
+    for (const [p, cost] of Object.entries(costByProvider).sort((a,b) => b[1]-a[1])) {
+      const calls = totalCalls[p] || 1;
+      html += `<tr><td>${p}</td><td>$${cost.toFixed(4)}</td><td>${calls}</td><td>$${(cost/calls).toFixed(6)}</td></tr>`;
+    }
+    html += '</tbody></table></div>';
+  }
 
   // Recent runs table
   html += `<div class="chart-container"><h2>Latest Summary</h2><table>
