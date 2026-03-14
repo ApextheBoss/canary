@@ -125,7 +125,9 @@ SUMMARY
 
 ```
 prompts.json       ← 20 test prompts with scoring criteria
-runner.py          ← Core test runner (400 lines, stdlib only)
+runner.py          ← Core test runner (stdlib only, no deps)
+dashboard.py       ← FastAPI web UI with Chart.js charts
+seed_demo.py       ← Generate demo data for local dev
 drift.db           ← SQLite database (auto-created)
 .github/workflows/ ← Daily automated runs
 ```
@@ -148,6 +150,25 @@ The included GitHub Actions workflow runs tests daily at midnight UTC and commit
 2. Add `OPENROUTER_API_KEY` to your repo secrets
 3. Enable GitHub Actions
 4. Done! Tests run daily, drift.db auto-updates
+
+---
+
+## Web Dashboard
+
+```bash
+pip install fastapi uvicorn
+python dashboard.py
+# → http://localhost:8000
+```
+
+Features:
+- **Score cards** — latest overall score per provider at a glance
+- **Drift alerts** — highlighted when a category drops >10 points
+- **30-day line chart** — historical score trends across providers
+- **Category bar chart** — side-by-side comparison of latest scores by category
+- **JSON API** — `/api/summary`, `/api/history`, `/api/drift`, `/api/runs/latest`
+
+To seed demo data for local development: `python seed_demo.py`
 
 ---
 
@@ -223,7 +244,7 @@ Edit `prompts.json`:
 - [x] CLI interface
 - [x] GitHub Actions workflow
 - [x] Drift detection
-- [ ] Web dashboard (FastAPI + charts)
+- [x] Web dashboard (FastAPI + Chart.js)
 - [ ] Webhook alerts (Slack, Discord, email)
 - [ ] More test categories (safety, multilingual, RAG)
 - [ ] Cost tracking per provider
