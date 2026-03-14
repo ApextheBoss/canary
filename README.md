@@ -212,6 +212,27 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 
 ---
 
+## Webhook Alerts
+
+Get notified when drift is detected. Set environment variables:
+
+```bash
+# Discord
+export CANARY_DISCORD_WEBHOOK="https://discord.com/api/webhooks/..."
+
+# Slack
+export CANARY_SLACK_WEBHOOK="https://hooks.slack.com/services/..."
+
+# Generic JSON POST (works with Zapier, n8n, etc.)
+export CANARY_WEBHOOK="https://your-endpoint.com/hook"
+```
+
+Alerts fire automatically after each test run when drift is detected. Daily summaries are included with score cards for each provider.
+
+For GitHub Actions, add these as repository secrets.
+
+---
+
 ## Adding Custom Tests
 
 Edit `prompts.json`:
@@ -245,7 +266,7 @@ Edit `prompts.json`:
 - [x] GitHub Actions workflow
 - [x] Drift detection
 - [x] Web dashboard (FastAPI + Chart.js)
-- [ ] Webhook alerts (Slack, Discord, email)
+- [x] Webhook alerts (Slack, Discord, generic JSON)
 - [ ] More test categories (safety, multilingual, RAG)
 - [ ] Cost tracking per provider
 - [ ] Weekly quality report generator

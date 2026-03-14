@@ -579,3 +579,27 @@ Examples:
             print(f"     Today: {a['today']:.1f} | Historical avg: {a['historical_avg']:.1f}")
     else:
         print("\n✅ No drift detected (or not enough historical data yet)")
+
+    # Send webhook alerts (if configured)
+    try:
+        from alerts import send_alerts
+        # Build summary for webhooks
+        summary = []
+        for provider_id in (providers or []):
+            pr = [r for r in results if r["provider"] == provider_id]
+            if pr:
+                avg = sum(r["score"] for r in pr) / len(pr)
+                avg_lat = sum(r["latency_ms"] for r in pr) / len(pr)
+                summary.append({
+                    "provider": provider_id,
+                    "overall_score": avg,
+                    "overall_latency": avg_lat,
+                    "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                })
+        sent = send_alerts(alerts, summary)
+        if sent:
+            print(f"\n📬 Alerts sent to: {', '.join(sent)}")
+    except ImportError:
+        pass
+    except Exception as e:
+        print(f"\n⚠️  Alert delivery failed: {e}")

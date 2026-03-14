@@ -28,6 +28,8 @@ jobs:
     - name: Run quality tests
       env:
         OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        CANARY_DISCORD_WEBHOOK: ${{ secrets.CANARY_DISCORD_WEBHOOK }}
+        CANARY_SLACK_WEBHOOK: ${{ secrets.CANARY_SLACK_WEBHOOK }}
       run: |
         python runner.py --providers openai/gpt-4o,anthropic/claude-3.5-sonnet,google/gemini-2.0-flash-thinking-exp
     
