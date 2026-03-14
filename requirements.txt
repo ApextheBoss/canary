@@ -1,0 +1,4 @@
+# Core dependencies (none - uses stdlib only!)
+# Future dashboard dependencies:
+# fastapi
+# uvicorn

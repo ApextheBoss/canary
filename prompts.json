@@ -1,0 +1,210 @@
+[
+  {
+    "id": "code-01",
+    "category": "code",
+    "prompt": "Write a Python function called `fibonacci` that returns the nth Fibonacci number using iteration (not recursion). Include type hints. The function should handle n=0 returning 0 and n=1 returning 1.",
+    "scoring": {
+      "type": "code_execution",
+      "test_code": "assert fibonacci(0) == 0\nassert fibonacci(1) == 1\nassert fibonacci(10) == 55\nassert fibonacci(20) == 6765",
+      "max_score": 100,
+      "criteria": ["compiles", "passes_tests", "has_type_hints", "uses_iteration"]
+    }
+  },
+  {
+    "id": "code-02",
+    "category": "code",
+    "prompt": "Write a Python function `merge_sorted(a: list[int], b: list[int]) -> list[int]` that merges two sorted lists into one sorted list in O(n+m) time. Do not use the built-in sort.",
+    "scoring": {
+      "type": "code_execution",
+      "test_code": "assert merge_sorted([1,3,5], [2,4,6]) == [1,2,3,4,5,6]\nassert merge_sorted([], [1,2,3]) == [1,2,3]\nassert merge_sorted([1], []) == [1]\nassert merge_sorted([1,1,1], [1,1]) == [1,1,1,1,1]",
+      "max_score": 100,
+      "criteria": ["compiles", "passes_tests", "correct_complexity"]
+    }
+  },
+  {
+    "id": "code-03",
+    "category": "code",
+    "prompt": "Write a Python function `is_valid_email(email: str) -> bool` that checks if a string is a valid email address. It should check for: exactly one @, at least one dot after @, no spaces, non-empty local and domain parts.",
+    "scoring": {
+      "type": "code_execution",
+      "test_code": "assert is_valid_email('test@example.com') == True\nassert is_valid_email('user@domain.co.uk') == True\nassert is_valid_email('invalid') == False\nassert is_valid_email('@domain.com') == False\nassert is_valid_email('user@') == False\nassert is_valid_email('user @domain.com') == False\nassert is_valid_email('user@domain') == False",
+      "max_score": 100,
+      "criteria": ["compiles", "passes_tests"]
+    }
+  },
+  {
+    "id": "code-04",
+    "category": "code",
+    "prompt": "Write a Python function `flatten(nested: list) -> list` that flattens an arbitrarily nested list. For example, flatten([1, [2, [3, 4], 5], 6]) should return [1, 2, 3, 4, 5, 6].",
+    "scoring": {
+      "type": "code_execution",
+      "test_code": "assert flatten([1, [2, [3, 4], 5], 6]) == [1, 2, 3, 4, 5, 6]\nassert flatten([]) == []\nassert flatten([1, 2, 3]) == [1, 2, 3]\nassert flatten([[[[1]]]]) == [1]",
+      "max_score": 100,
+      "criteria": ["compiles", "passes_tests"]
+    }
+  },
+  {
+    "id": "reason-01",
+    "category": "reasoning",
+    "prompt": "A farmer has 17 sheep. All but 9 die. How many sheep does the farmer have left?",
+    "scoring": {
+      "type": "exact_answer",
+      "expected": "9",
+      "max_score": 100
+    }
+  },
+  {
+    "id": "reason-02",
+    "category": "reasoning",
+    "prompt": "If it takes 5 machines 5 minutes to make 5 widgets, how long would it take 100 machines to make 100 widgets?",
+    "scoring": {
+      "type": "exact_answer",
+      "expected": "5",
+      "max_score": 100
+    }
+  },
+  {
+    "id": "reason-03",
+    "category": "reasoning",
+    "prompt": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost in cents?",
+    "scoring": {
+      "type": "exact_answer",
+      "expected": "5",
+      "max_score": 100
+    }
+  },
+  {
+    "id": "reason-04",
+    "category": "reasoning",
+    "prompt": "There are three boxes. One contains only apples, one contains only oranges, and one contains both apples and oranges. The boxes are labeled incorrectly such that no label is correct. You pick one fruit from the box labeled 'Apples and Oranges'. It's an apple. What does each box actually contain?",
+    "scoring": {
+      "type": "structured_answer",
+      "expected_contains": ["labeled 'Apples and Oranges' contains only apples", "labeled 'Oranges' contains both", "labeled 'Apples' contains only oranges"],
+      "max_score": 100
+    }
+  },
+  {
+    "id": "math-01",
+    "category": "math",
+    "prompt": "What is 7823 * 4561?",
+    "scoring": {
+      "type": "exact_answer",
+      "expected": "35,674,903",
+      "max_score": 100
+    }
+  },
+  {
+    "id": "math-02",
+    "category": "math",
+    "prompt": "What is the derivative of f(x) = 3x^4 - 2x^3 + 7x - 5?",
+    "scoring": {
+      "type": "exact_answer",
+      "expected": "12x^3 - 6x^2 + 7",
+      "max_score": 100
+    }
+  },
+  {
+    "id": "math-03",
+    "category": "math",
+    "prompt": "Solve for x: 2x + 7 = 3x - 5",
+    "scoring": {
+      "type": "exact_answer",
+      "expected": "12",
+      "max_score": 100
+    }
+  },
+  {
+    "id": "math-04",
+    "category": "math",
+    "prompt": "What is the sum of all integers from 1 to 100?",
+    "scoring": {
+      "type": "exact_answer",
+      "expected": "5050",
+      "max_score": 100
+    }
+  },
+  {
+    "id": "instruct-01",
+    "category": "instruction_following",
+    "prompt": "List exactly 5 European countries. Format each as a numbered list (1. Country). Do not include any countries from other continents. Do not add any explanation or commentary.",
+    "scoring": {
+      "type": "format_check",
+      "criteria": ["exactly_5_items", "numbered_list", "all_european", "no_extra_text"],
+      "max_score": 100
+    }
+  },
+  {
+    "id": "instruct-02",
+    "category": "instruction_following",
+    "prompt": "Write a haiku (5-7-5 syllable structure) about rain. Output ONLY the haiku, nothing else.",
+    "scoring": {
+      "type": "format_check",
+      "criteria": ["three_lines", "no_extra_text", "roughly_correct_syllables"],
+      "max_score": 100
+    }
+  },
+  {
+    "id": "instruct-03",
+    "category": "instruction_following",
+    "prompt": "Respond with a JSON object containing exactly three keys: 'name' (string), 'age' (number), and 'active' (boolean). Use any values you want. Output ONLY valid JSON, no markdown code blocks, no explanation.",
+    "scoring": {
+      "type": "json_check",
+      "criteria": ["valid_json", "exactly_three_keys", "correct_types", "no_markdown"],
+      "max_score": 100
+    }
+  },
+  {
+    "id": "instruct-04",
+    "category": "instruction_following",
+    "prompt": "Translate 'Hello, how are you?' into exactly 3 languages: French, Spanish, and Japanese. Format as 'Language: Translation' on separate lines. No other text.",
+    "scoring": {
+      "type": "format_check",
+      "criteria": ["exactly_3_translations", "correct_format", "correct_languages", "no_extra_text"],
+      "max_score": 100
+    }
+  },
+  {
+    "id": "consist-01",
+    "category": "consistency",
+    "prompt": "What is the capital of Australia?",
+    "scoring": {
+      "type": "consistency_check",
+      "expected": "Canberra",
+      "runs": 3,
+      "max_score": 100
+    }
+  },
+  {
+    "id": "consist-02",
+    "category": "consistency",
+    "prompt": "Is 97 a prime number? Answer only 'yes' or 'no'.",
+    "scoring": {
+      "type": "consistency_check",
+      "expected": "yes",
+      "runs": 3,
+      "max_score": 100
+    }
+  },
+  {
+    "id": "consist-03",
+    "category": "consistency",
+    "prompt": "Sort these numbers from smallest to largest: 42, 17, 93, 5, 61. Output only the sorted numbers separated by commas.",
+    "scoring": {
+      "type": "consistency_check",
+      "expected": "5, 17, 42, 61, 93",
+      "runs": 3,
+      "max_score": 100
+    }
+  },
+  {
+    "id": "consist-04",
+    "category": "consistency",
+    "prompt": "Convert 72 degrees Fahrenheit to Celsius. Give only the number rounded to one decimal place.",
+    "scoring": {
+      "type": "consistency_check",
+      "expected": "22.2",
+      "runs": 3,
+      "max_score": 100
+    }
+  }
+]

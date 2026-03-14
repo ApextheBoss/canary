@@ -1,0 +1,269 @@
+# 🐤 Canary — LLM Drift Monitor
+
+**Know when your LLM provider silently degrades.**
+
+Automated quality testing for AI models. Like Pingdom for LLM quality.
+
+[![Daily Tests](https://github.com/ApextheBoss/canary/actions/workflows/daily-run.yml/badge.svg)](https://github.com/ApextheBoss/canary/actions/workflows/daily-run.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## Why This Exists
+
+LLM providers update their models constantly. Sometimes these updates improve quality. Sometimes they don't.
+
+**The problem:** You don't find out until your users complain.
+
+**The solution:** Canary runs standardized quality tests daily and alerts you when scores change significantly.
+
+> *"In the coal mine of AI deployment, you need a canary."*
+
+---
+
+## What It Does
+
+- 📊 **20 test prompts** across 5 categories (code, reasoning, math, instruction-following, consistency)
+- 🤖 **Multi-provider testing** via OpenRouter (OpenAI, Anthropic, Google, etc.)
+- 📈 **Drift detection** — automatic alerts when quality shifts >10 points
+- 🗄️ **Historical tracking** — SQLite database of all test runs
+- ⚡ **Zero dependencies** — pure Python stdlib (no pip install needed)
+- 🤖 **GitHub Actions** — free daily automated testing
+
+---
+
+## Quick Start
+
+### 1. Clone & Setup
+
+```bash
+git clone https://github.com/ApextheBoss/canary.git
+cd canary
+```
+
+**No installation needed!** Uses Python stdlib only.
+
+### 2. Get API Key
+
+Sign up at [OpenRouter.ai](https://openrouter.ai) (free tier available)
+
+```bash
+export OPENROUTER_API_KEY="your-key-here"
+```
+
+### 3. Run Your First Test
+
+```bash
+# Test specific providers
+python runner.py --providers openai/gpt-4o,anthropic/claude-3.5-sonnet
+
+# View historical scores
+python runner.py --report
+```
+
+---
+
+## Example Output
+
+```
+🐤 Canary — LLM Drift Monitor
+   Run started: 2026-03-14T14:35:00Z
+   Providers: openai/gpt-4o, anthropic/claude-3.5-sonnet
+
+============================================================
+Provider: openai/gpt-4o
+============================================================
+  [1/40] code-01... score=100 (all tests passed) 1243ms
+  [2/40] code-02... score=100 (all tests passed) 891ms
+  [3/40] reason-01... score=100 (correct) 456ms
+  ...
+
+============================================================
+SUMMARY
+============================================================
+  openai/gpt-4o: avg_score=94.2 avg_latency=876ms errors=0
+  anthropic/claude-3.5-sonnet: avg_score=96.8 avg_latency=1104ms errors=0
+
+⚠️  DRIFT ALERTS
+============================================================
+  📉 openai/gpt-4o / reasoning: degraded by 12.3 pts
+     Today: 85.5 | Historical avg: 97.8
+```
+
+---
+
+## Test Categories
+
+### 1. Code Generation
+- Function implementation with unit tests
+- Syntax correctness, test pass rate
+- Type hints, complexity requirements
+
+### 2. Reasoning
+- Logic puzzles with known answers
+- Multi-step problem solving
+- Common cognitive bias tests
+
+### 3. Math
+- Arithmetic, algebra, calculus
+- Word problems
+- Precision & accuracy
+
+### 4. Instruction Following
+- Format compliance (JSON, lists, haiku)
+- Constraint adherence
+- "Output ONLY X" tests
+
+### 5. Consistency
+- Same prompt, multiple runs
+- Variance measurement
+- Deterministic answer tests
+
+---
+
+## Architecture
+
+```
+prompts.json       ← 20 test prompts with scoring criteria
+runner.py          ← Core test runner (400 lines, stdlib only)
+drift.db           ← SQLite database (auto-created)
+.github/workflows/ ← Daily automated runs
+```
+
+**Scoring is deterministic**, not vibes:
+- Code: actual execution + unit tests
+- Math: exact numeric comparison
+- Format: regex + structure validation
+- JSON: parse + schema check
+
+---
+
+## Automated Daily Testing
+
+The included GitHub Actions workflow runs tests daily at midnight UTC and commits results to the repo.
+
+**Setup:**
+
+1. Fork this repo
+2. Add `OPENROUTER_API_KEY` to your repo secrets
+3. Enable GitHub Actions
+4. Done! Tests run daily, drift.db auto-updates
+
+---
+
+## CLI Reference
+
+```bash
+# Run tests on specific providers
+python runner.py --providers openai/gpt-4o,anthropic/claude-3.5-sonnet
+
+# Run all configured providers
+python runner.py
+
+# Show historical report (last 7 days detailed)
+python runner.py --report
+
+# Custom drift detection window
+python runner.py --days 14
+```
+
+---
+
+## Configuration
+
+### Using OpenRouter (Recommended)
+
+OpenRouter is a unified API that routes to all major LLM providers. One API key, access to 100+ models.
+
+```bash
+export OPENROUTER_API_KEY="sk-or-v1-..."
+python runner.py --providers openai/gpt-4o,anthropic/claude-3.5-sonnet,google/gemini-2.0-flash-thinking-exp
+```
+
+### Direct Provider APIs
+
+You can also use provider APIs directly (legacy support):
+
+```bash
+export OPENAI_API_KEY="sk-..."
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+---
+
+## Adding Custom Tests
+
+Edit `prompts.json`:
+
+```json
+{
+  "id": "your-test-01",
+  "category": "reasoning",
+  "prompt": "Your test prompt here",
+  "scoring": {
+    "type": "exact_answer",
+    "expected": "42"
+  }
+}
+```
+
+**Scoring types:**
+- `exact_answer` — response must contain expected string
+- `code_execution` — extract code, run test assertions
+- `format_check` — validate structure (lists, line counts, etc.)
+- `json_check` — parse + schema validation
+- `structured_answer` — check for multiple expected substrings
+
+---
+
+## Roadmap
+
+- [x] Core test runner
+- [x] OpenRouter integration
+- [x] CLI interface
+- [x] GitHub Actions workflow
+- [x] Drift detection
+- [ ] Web dashboard (FastAPI + charts)
+- [ ] Webhook alerts (Slack, Discord, email)
+- [ ] More test categories (safety, multilingual, RAG)
+- [ ] Cost tracking per provider
+- [ ] Weekly quality report generator
+
+---
+
+## Contributing
+
+PRs welcome! Areas that need help:
+
+1. **More test prompts** — especially edge cases that models often fail
+2. **New scoring functions** — better ways to measure quality
+3. **Provider integrations** — direct API support for more providers
+4. **Dashboard** — simple web UI for visualizing trends
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+---
+
+## Why "Canary"?
+
+Coal miners used to bring canaries into mines. If the air went bad, the canary would die first — warning the miners to evacuate.
+
+When your LLM provider silently degrades quality, **Canary dies first**. You get the warning before your users do.
+
+---
+
+## License
+
+MIT — do whatever you want with it.
+
+---
+
+## Credits
+
+Built by [@ApextheBoss](https://github.com/ApextheBoss) while the [Claude Code A/B testing drama](https://news.ycombinator.com/item?id=42679337) was trending on HN.
+
+Because if we can't trust our AI providers to tell us when they're experimenting on us, we'll just have to test them ourselves.
+
+---
+
+**⭐ Star this repo to stay updated on LLM quality trends!**
