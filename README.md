@@ -128,6 +128,7 @@ prompts.json       ← 20 test prompts with scoring criteria
 runner.py          ← Core test runner (stdlib only, no deps)
 dashboard.py       ← FastAPI web UI with Chart.js charts
 seed_demo.py       ← Generate demo data for local dev
+report.py          ← Weekly quality report generator
 drift.db           ← SQLite database (auto-created)
 .github/workflows/ ← Daily automated runs
 ```
@@ -186,6 +187,12 @@ python runner.py --report
 
 # Custom drift detection window
 python runner.py --days 14
+
+# Generate weekly quality report
+python report.py                    # Print to stdout
+python report.py -o report.md       # Save to file
+python report.py --days 14          # Custom period
+python report.py --webhook          # Post to webhooks
 ```
 
 ---
@@ -269,7 +276,7 @@ Edit `prompts.json`:
 - [x] Webhook alerts (Slack, Discord, generic JSON)
 - [ ] More test categories (safety, multilingual, RAG)
 - [x] Cost tracking per provider
-- [ ] Weekly quality report generator
+- [x] Weekly quality report generator
 
 ---
 

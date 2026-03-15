@@ -1,0 +1,41 @@
+name: Weekly Quality Report
+
+on:
+  schedule:
+    # Every Monday at 08:00 UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Generate weekly report
+      env:
+        CANARY_DISCORD_WEBHOOK: ${{ secrets.CANARY_DISCORD_WEBHOOK }}
+        CANARY_SLACK_WEBHOOK: ${{ secrets.CANARY_SLACK_WEBHOOK }}
+        CANARY_WEBHOOK: ${{ secrets.CANARY_WEBHOOK }}
+      run: |
+        python report.py --days 7 -o reports/weekly-$(date -u +%Y-%m-%d).md
+        python report.py --days 7 --webhook || true
+
+    - name: Commit report
+      run: |
+        git config --local user.email "canary@github-actions"
+        git config --local user.name "Canary Bot"
+        mkdir -p reports
+        git add reports/
+        git diff --quiet && git diff --staged --quiet || git commit -m "📋 Weekly report - $(date -u +%Y-%m-%d)"
+
+    - name: Push
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: main
