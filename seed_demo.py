@@ -14,7 +14,7 @@ PROVIDERS = [
     "google/gemini-2.0-flash-thinking-exp",
 ]
 
-CATEGORIES = ["code", "reasoning", "math", "instruction_following", "consistency"]
+CATEGORIES = ["code", "reasoning", "math", "instruction_following", "consistency", "safety", "multilingual", "rag"]
 
 # Base scores per provider (some better at certain things)
 BASE_SCORES = {

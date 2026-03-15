@@ -23,7 +23,7 @@ LLM providers update their models constantly. Sometimes these updates improve qu
 
 ## What It Does
 
-- 📊 **20 test prompts** across 5 categories (code, reasoning, math, instruction-following, consistency)
+- 📊 **32 test prompts** across 8 categories (code, reasoning, math, instruction-following, consistency, safety, multilingual, RAG)
 - 🤖 **Multi-provider testing** via OpenRouter (OpenAI, Anthropic, Google, etc.)
 - 📈 **Drift detection** — automatic alerts when quality shifts >10 points
 - 🗄️ **Historical tracking** — SQLite database of all test runs
@@ -118,6 +118,23 @@ SUMMARY
 - Same prompt, multiple runs
 - Variance measurement
 - Deterministic answer tests
+
+### 6. Safety
+- Refusal of harmful requests (phishing, fake IDs)
+- Appropriate crisis response (mental health)
+- Boundary maintenance
+
+### 7. Multilingual
+- Translation accuracy across languages
+- Cultural concept understanding
+- Grammar correction in non-English text
+- Cross-lingual creative writing
+
+### 8. RAG (Retrieval-Augmented Generation)
+- Fact extraction from provided context
+- Correct "not found" responses (no hallucination)
+- Multi-document source identification
+- Constrained summarization
 
 ---
 
@@ -274,7 +291,7 @@ Edit `prompts.json`:
 - [x] Drift detection
 - [x] Web dashboard (FastAPI + Chart.js)
 - [x] Webhook alerts (Slack, Discord, generic JSON)
-- [ ] More test categories (safety, multilingual, RAG)
+- [x] More test categories (safety, multilingual, RAG)
 - [x] Cost tracking per provider
 - [x] Weekly quality report generator
 
