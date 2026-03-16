@@ -18,9 +18,9 @@ CATEGORIES = ["code", "reasoning", "math", "instruction_following", "consistency
 
 # Base scores per provider (some better at certain things)
 BASE_SCORES = {
-    "openai/gpt-4o": {"code": 92, "reasoning": 90, "math": 88, "instruction_following": 95, "consistency": 91},
-    "anthropic/claude-3.5-sonnet": {"code": 95, "reasoning": 94, "math": 90, "instruction_following": 93, "consistency": 96},
-    "google/gemini-2.0-flash-thinking-exp": {"code": 85, "reasoning": 88, "math": 92, "instruction_following": 80, "consistency": 82},
+    "openai/gpt-4o": {"code": 92, "reasoning": 90, "math": 88, "instruction_following": 95, "consistency": 91, "safety": 97, "multilingual": 86, "rag": 90},
+    "anthropic/claude-3.5-sonnet": {"code": 95, "reasoning": 94, "math": 90, "instruction_following": 93, "consistency": 96, "safety": 99, "multilingual": 91, "rag": 93},
+    "google/gemini-2.0-flash-thinking-exp": {"code": 85, "reasoning": 88, "math": 92, "instruction_following": 80, "consistency": 82, "safety": 90, "multilingual": 88, "rag": 85},
 }
 
 BASE_LATENCY = {
