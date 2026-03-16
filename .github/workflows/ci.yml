@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install test dependencies
+        run: pip install pytest
+      - name: Run tests
+        run: pytest tests/ -v
+      - name: Verify runner imports cleanly
+        run: python -c "import runner; print('✅ runner.py imports OK')"
+      - name: Verify prompts.json is valid
+        run: python -c "import json; json.load(open('prompts.json')); print('✅ prompts.json valid')"
