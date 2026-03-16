@@ -224,6 +224,9 @@ python runner.py
 # Show historical report (last 7 days detailed)
 python runner.py --report
 
+# Compare two providers head-to-head
+python runner.py --compare openai/gpt-4o,anthropic/claude-3.5-sonnet
+
 # Custom drift detection window
 python runner.py --days 14
 

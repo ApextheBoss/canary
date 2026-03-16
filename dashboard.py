@@ -108,6 +108,45 @@ def api_drift(days: int = 7, threshold: float = 10):
     return alerts
 
 
+@app.get("/api/compare")
+def api_compare(a: str = "", b: str = "", days: int = 7):
+    """Head-to-head comparison of two providers."""
+    if not a or not b:
+        return {"error": "Provide ?a=provider1&b=provider2"}
+    conn = get_db()
+
+    def get_stats(provider):
+        rows = conn.execute("""
+            SELECT category,
+                   AVG(avg_score) as avg_score,
+                   AVG(avg_latency_ms) as avg_latency,
+                   COUNT(*) as runs
+            FROM daily_scores
+            WHERE provider = ? AND date >= date('now', ?)
+            GROUP BY category ORDER BY category
+        """, (provider, f'-{days} days')).fetchall()
+        return {r["category"]: {"score": r["avg_score"], "latency": r["avg_latency"], "runs": r["runs"]} for r in rows}
+
+    stats_a = get_stats(a)
+    stats_b = get_stats(b)
+    categories = sorted(set(list(stats_a.keys()) + list(stats_b.keys())))
+
+    comparison = []
+    for cat in categories:
+        sa = stats_a.get(cat, {})
+        sb = stats_b.get(cat, {})
+        comparison.append({
+            "category": cat,
+            "a_score": round(sa.get("score", 0), 1) if sa else None,
+            "b_score": round(sb.get("score", 0), 1) if sb else None,
+            "a_latency": round(sa.get("latency", 0)) if sa else None,
+            "b_latency": round(sb.get("latency", 0)) if sb else None,
+        })
+
+    conn.close()
+    return {"provider_a": a, "provider_b": b, "days": days, "categories": comparison}
+
+
 @app.get("/api/runs/latest")
 def api_latest_runs(limit: int = 50):
     """Latest individual test results."""

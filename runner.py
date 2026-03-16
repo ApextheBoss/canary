@@ -626,6 +626,115 @@ def show_report(days=30):
     conn.close()
 
 
+def compare_providers(provider_a: str, provider_b: str, days: int = 7):
+    """Head-to-head comparison of two providers across all categories."""
+    if not DB_PATH.exists():
+        print("No data yet. Run tests first.")
+        return
+
+    conn = sqlite3.connect(DB_PATH)
+
+    def get_stats(provider):
+        cursor = conn.execute("""
+            SELECT category, 
+                   AVG(avg_score) as avg_score, 
+                   AVG(avg_latency_ms) as avg_latency,
+                   COUNT(*) as runs
+            FROM daily_scores
+            WHERE provider = ? 
+              AND date >= date('now', ?)
+            GROUP BY category
+            ORDER BY category
+        """, (provider, f'-{days} days'))
+        return {row[0]: {"score": row[1], "latency": row[2], "runs": row[3]} for row in cursor.fetchall()}
+
+    stats_a = get_stats(provider_a)
+    stats_b = get_stats(provider_b)
+
+    if not stats_a and not stats_b:
+        print(f"No data found for either provider in the last {days} days.")
+        conn.close()
+        return
+
+    all_categories = sorted(set(list(stats_a.keys()) + list(stats_b.keys())))
+
+    # Header
+    label_a = provider_a.split("/")[-1] if "/" in provider_a else provider_a
+    label_b = provider_b.split("/")[-1] if "/" in provider_b else provider_b
+
+    print(f"\n🐤 HEAD-TO-HEAD COMPARISON (last {days} days)")
+    print(f"{'='*70}")
+    print(f"   {'Category':<20} {label_a:>15}  vs  {label_b:<15}  Winner")
+    print(f"   {'─'*66}")
+
+    wins_a, wins_b, ties = 0, 0, 0
+    totals_a, totals_b = [], []
+    lat_a, lat_b = [], []
+
+    for cat in all_categories:
+        sa = stats_a.get(cat, {}).get("score")
+        sb = stats_b.get(cat, {}).get("score")
+        la = stats_a.get(cat, {}).get("latency")
+        lb = stats_b.get(cat, {}).get("latency")
+
+        score_str_a = f"{sa:5.1f}" if sa is not None else "  N/A"
+        score_str_b = f"{sb:5.1f}" if sb is not None else "  N/A"
+
+        if sa is not None:
+            totals_a.append(sa)
+        if sb is not None:
+            totals_b.append(sb)
+        if la is not None:
+            lat_a.append(la)
+        if lb is not None:
+            lat_b.append(lb)
+
+        if sa is not None and sb is not None:
+            diff = sa - sb
+            if abs(diff) < 1.0:
+                winner = "  🤝 Tie"
+                ties += 1
+            elif diff > 0:
+                winner = f"  🏆 {label_a} (+{diff:.1f})"
+                wins_a += 1
+            else:
+                winner = f"  🏆 {label_b} (+{abs(diff):.1f})"
+                wins_b += 1
+        else:
+            winner = "  ⚠️  Incomplete"
+
+        print(f"   {cat:<20} {score_str_a}         {score_str_b}      {winner}")
+
+    # Overall
+    print(f"   {'─'*66}")
+    overall_a = sum(totals_a) / len(totals_a) if totals_a else 0
+    overall_b = sum(totals_b) / len(totals_b) if totals_b else 0
+    avg_lat_a = sum(lat_a) / len(lat_a) if lat_a else 0
+    avg_lat_b = sum(lat_b) / len(lat_b) if lat_b else 0
+
+    print(f"\n   📊 OVERALL")
+    print(f"   {'Score':<20} {overall_a:5.1f}         {overall_b:5.1f}")
+    print(f"   {'Latency (ms)':<20} {avg_lat_a:5.0f}         {avg_lat_b:5.0f}")
+    print(f"   {'Category wins':<20} {wins_a:5d}         {wins_b:5d}      (ties: {ties})")
+
+    # Verdict
+    print(f"\n   🏅 VERDICT: ", end="")
+    if overall_a > overall_b + 2:
+        print(f"{label_a} leads by {overall_a - overall_b:.1f} points")
+    elif overall_b > overall_a + 2:
+        print(f"{label_b} leads by {overall_b - overall_a:.1f} points")
+    else:
+        print(f"Too close to call ({abs(overall_a - overall_b):.1f} pt difference)")
+
+    if avg_lat_a and avg_lat_b:
+        faster = label_a if avg_lat_a < avg_lat_b else label_b
+        pct = abs(avg_lat_a - avg_lat_b) / max(avg_lat_a, avg_lat_b) * 100
+        print(f"   ⚡ {faster} is {pct:.0f}% faster on average")
+
+    print()
+    conn.close()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Canary — LLM Drift Monitor. Automated quality testing for AI models.",
@@ -638,6 +747,9 @@ Examples:
   # Show historical report
   python runner.py --report
   
+  # Compare two providers head-to-head
+  python runner.py --compare openai/gpt-4o,anthropic/claude-3.5-sonnet
+
   # Run all tests with drift detection
   python runner.py
         """
@@ -656,13 +768,27 @@ Examples:
     )
     
     parser.add_argument(
+        "--compare",
+        type=str,
+        help="Compare two providers head-to-head (comma-separated, e.g., openai/gpt-4o,anthropic/claude-3.5-sonnet)"
+    )
+    
+    parser.add_argument(
         "--days",
         type=int,
         default=7,
-        help="Number of days for drift detection (default: 7)"
+        help="Number of days for drift detection/comparison (default: 7)"
     )
     
     args = parser.parse_args()
+    
+    if args.compare:
+        parts = [p.strip() for p in args.compare.split(",")]
+        if len(parts) != 2:
+            print("Error: --compare requires exactly 2 providers separated by comma")
+            sys.exit(1)
+        compare_providers(parts[0], parts[1], days=args.days)
+        sys.exit(0)
     
     if args.report:
         show_report()
