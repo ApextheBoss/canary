@@ -171,6 +171,16 @@ The included GitHub Actions workflow runs tests daily at midnight UTC and commit
 
 ---
 
+## Docker
+
+```bash
+docker build -t canary .
+docker run -p 8000:8000 -e OPENROUTER_API_KEY="your-key" canary
+# → http://localhost:8000 (with demo data pre-seeded)
+```
+
+---
+
 ## Web Dashboard
 
 ```bash

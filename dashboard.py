@@ -23,6 +23,15 @@ def get_db():
 # ── API endpoints ──────────────────────────────────────────
 
 
+@app.get("/health")
+def health():
+    """Health check endpoint."""
+    conn = get_db()
+    count = conn.execute("SELECT COUNT(*) FROM daily_scores").fetchone()[0]
+    conn.close()
+    return {"status": "ok", "records": count}
+
+
 @app.get("/api/providers")
 def api_providers():
     """List all providers with data."""
