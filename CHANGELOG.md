@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.0 — 2026-03-16
+
+**First tagged release! 🎉**
+
+### Added
+- 🆚 `--compare` CLI command for head-to-head provider comparison
+- `/api/compare` dashboard endpoint
+- Tagged release v0.1.0
+
 All notable changes to Canary will be documented in this file.
 
 ## [0.1.0] — 2026-03-15
