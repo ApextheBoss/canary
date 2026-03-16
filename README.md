@@ -184,7 +184,19 @@ Features:
 - **Drift alerts** — highlighted when a category drops >10 points
 - **30-day line chart** — historical score trends across providers
 - **Category bar chart** — side-by-side comparison of latest scores by category
+- **CSV export** — download historical data for external analysis
+- **Auto-refresh** — live dashboard updates every 60 seconds
+- **Dynamic SVG badges** — embed live scores in your README
 - **JSON API** — `/api/summary`, `/api/history`, `/api/drift`, `/api/runs/latest`
+
+### Dynamic Badges
+
+Embed live provider scores in any README or wiki:
+
+```markdown
+![GPT-4o Score](https://your-canary-host/badge/openai/gpt-4o.svg)
+![Claude Score](https://your-canary-host/badge/anthropic/claude-3.5-sonnet.svg)
+```
 
 To seed demo data for local development: `python seed_demo.py`
 

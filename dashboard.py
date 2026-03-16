@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 DB_PATH = Path(__file__).parent / "drift.db"
 
@@ -133,6 +133,76 @@ def api_costs(days: int = 30):
         return []
 
 
+@app.get("/api/export.csv")
+def api_export_csv(days: int = 30):
+    """Export daily scores as CSV."""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT date, provider, category, avg_score, num_tests, avg_latency_ms
+        FROM daily_scores
+        WHERE date >= date('now', ?)
+        ORDER BY date, provider, category
+    """, (f"-{days} days",)).fetchall()
+    conn.close()
+    lines = ["date,provider,category,avg_score,num_tests,avg_latency_ms"]
+    for r in rows:
+        lines.append(f"{r['date']},{r['provider']},{r['category']},{r['avg_score']},{r['num_tests']},{r['avg_latency_ms']}")
+    return Response(content="\n".join(lines), media_type="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=canary-export.csv"})
+
+
+@app.get("/badge/{provider:path}.svg")
+def badge_svg(provider: str):
+    """Dynamic SVG badge showing latest score for a provider.
+    
+    Usage in README: ![Score](https://your-host/badge/openai/gpt-4o.svg)
+    """
+    conn = get_db()
+    row = conn.execute("""
+        SELECT AVG(avg_score) as score FROM daily_scores
+        WHERE provider = ? AND date = (SELECT MAX(date) FROM daily_scores WHERE provider = ?)
+    """, (provider, provider)).fetchone()
+    conn.close()
+
+    if row and row["score"] is not None:
+        score = row["score"]
+        label = f"{score:.1f}%"
+        if score >= 85:
+            color = "#3fb950"
+        elif score >= 60:
+            color = "#d29922"
+        else:
+            color = "#f85149"
+    else:
+        label = "no data"
+        color = "#8b949e"
+
+    # Shield-style SVG badge
+    name = provider.split("/")[-1] if "/" in provider else provider
+    name_width = max(len(name) * 7 + 10, 50)
+    value_width = max(len(label) * 7 + 10, 40)
+    total_width = name_width + value_width
+
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="20">
+  <linearGradient id="b" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+  <stop offset="1" stop-opacity=".1"/></linearGradient>
+  <clipPath id="a"><rect width="{total_width}" height="20" rx="3" fill="#fff"/></clipPath>
+  <g clip-path="url(#a)">
+    <rect width="{name_width}" height="20" fill="#555"/>
+    <rect x="{name_width}" width="{value_width}" height="20" fill="{color}"/>
+    <rect width="{total_width}" height="20" fill="url(#b)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,sans-serif" font-size="11">
+    <text x="{name_width/2}" y="15" fill="#010101" fill-opacity=".3">{name}</text>
+    <text x="{name_width/2}" y="14">{name}</text>
+    <text x="{name_width + value_width/2}" y="15" fill="#010101" fill-opacity=".3">{label}</text>
+    <text x="{name_width + value_width/2}" y="14">{label}</text>
+  </g>
+</svg>"""
+    return Response(content=svg, media_type="image/svg+xml",
+                    headers={"Cache-Control": "no-cache, max-age=300"})
+
+
 # ── HTML Dashboard ─────────────────────────────────────────
 
 
@@ -173,6 +243,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   .alert .detail { font-size: 0.85rem; color: #8b949e; }
   .empty { text-align: center; color: #8b949e; padding: 40px; }
   .loading { text-align: center; padding: 60px; color: #8b949e; }
+  .toolbar { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; }
+  .toolbar button, .toolbar a { background: #21262d; border: 1px solid #30363d; color: #e6edf3; padding: 6px 14px;
+    border-radius: 6px; cursor: pointer; font-size: 0.85rem; text-decoration: none; }
+  .toolbar button:hover, .toolbar a:hover { background: #30363d; }
+  .toolbar .spacer { flex: 1; }
+  .toolbar .status { font-size: 0.8rem; color: #8b949e; }
   #app { max-width: 1100px; margin: 0 auto; }
 </style>
 </head>
@@ -180,6 +256,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <div id="app">
   <h1>🐤 Canary</h1>
   <p class="subtitle">LLM Drift Monitor — Know when your AI provider silently degrades</p>
+  <div class="toolbar">
+    <a href="/api/export.csv">📥 Export CSV</a>
+    <button onclick="toggleRefresh()" id="refreshBtn">🔄 Auto-refresh: OFF</button>
+    <div class="spacer"></div>
+    <span class="status" id="lastUpdate"></span>
+  </div>
   <div id="content" class="loading">Loading dashboard…</div>
 </div>
 <script>
@@ -347,6 +429,14 @@ async function load() {
   });
 }
 
+let refreshInterval = null;
+function toggleRefresh() {
+  if (refreshInterval) { clearInterval(refreshInterval); refreshInterval = null;
+    document.getElementById('refreshBtn').textContent = '🔄 Auto-refresh: OFF';
+  } else { refreshInterval = setInterval(load, 60000);
+    document.getElementById('refreshBtn').textContent = '🔄 Auto-refresh: ON (60s)';
+  }
+}
 load();
 </script>
 </body>
