@@ -248,6 +248,27 @@ python report.py --webhook          # Post to webhooks
 
 ## Configuration
 
+### Config File (canary.yaml)
+
+Instead of passing CLI flags every time, create a `canary.yaml` in the project root:
+
+```yaml
+# Providers to test
+providers:
+  - openai/gpt-4o
+  - anthropic/claude-3.5-sonnet
+  - google/gemini-2.0-flash-thinking-exp
+
+# Drift detection settings
+drift:
+  threshold: 10      # Alert when score changes by this many points
+  window_days: 7     # Compare against this many days of history
+```
+
+Then just run `python runner.py` — no flags needed!
+
+See `canary.example.yaml` for all options.
+
 ### Using OpenRouter (Recommended)
 
 OpenRouter is a unified API that routes to all major LLM providers. One API key, access to 100+ models.

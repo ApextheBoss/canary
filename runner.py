@@ -13,6 +13,63 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 
+
+def load_config(config_path=None):
+    """Load configuration from canary.yaml if available. Returns dict or {}."""
+    if config_path is None:
+        config_path = Path(__file__).parent / "canary.yaml"
+    else:
+        config_path = Path(config_path)
+    if not config_path.exists():
+        return {}
+    try:
+        # Minimal YAML parser for simple key-value + list configs (no PyYAML needed)
+        config = {}
+        current_key = None
+        current_list = None
+        with open(config_path) as f:
+            for line in f:
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                # Top-level key with sub-dict
+                if not line.startswith(" ") and not line.startswith("\t") and ":" in stripped:
+                    key, _, val = stripped.partition(":")
+                    val = val.strip().strip('"').strip("'")
+                    if val:
+                        config[key.strip()] = val
+                        current_key = None
+                        current_list = None
+                    else:
+                        current_key = key.strip()
+                        config[current_key] = {}
+                        current_list = None
+                elif current_key and stripped.startswith("- "):
+                    # List item under current key
+                    val = stripped[2:].strip().strip('"').strip("'")
+                    if not isinstance(config[current_key], list):
+                        config[current_key] = []
+                    config[current_key].append(val)
+                elif current_key and ":" in stripped:
+                    # Sub-key
+                    key, _, val = stripped.partition(":")
+                    val = val.strip().strip('"').strip("'")
+                    if isinstance(config[current_key], list):
+                        pass  # skip
+                    else:
+                        # Try numeric conversion
+                        try:
+                            val = int(val)
+                        except (ValueError, TypeError):
+                            try:
+                                val = float(val)
+                            except (ValueError, TypeError):
+                                pass
+                        config[current_key][key.strip()] = val
+        return config
+    except Exception:
+        return {}
+
 DB_PATH = Path(__file__).parent / "drift.db"
 PROMPTS_PATH = Path(__file__).parent / "prompts.json"
 
@@ -792,7 +849,16 @@ Examples:
         help="Comma-separated prompt IDs to run (e.g., code-01,math-02)"
     )
     
+    parser.add_argument(
+        "--config",
+        type=str,
+        help="Path to canary.yaml config file (default: canary.yaml in project dir)"
+    )
+    
     args = parser.parse_args()
+    
+    # Load config file defaults
+    cfg = load_config(args.config)
     
     if args.compare:
         parts = [p.strip() for p in args.compare.split(",")]
@@ -809,6 +875,8 @@ Examples:
     providers = None
     if args.providers:
         providers = [p.strip() for p in args.providers.split(",")]
+    elif isinstance(cfg.get("providers"), list) and cfg["providers"]:
+        providers = cfg["providers"]
     
     prompt_ids = None
     if args.prompts:
@@ -842,7 +910,9 @@ Examples:
     results = run_tests(providers=providers, prompts=prompt_ids)
     
     # Check for drift
-    alerts = detect_drift(days=args.days)
+    drift_cfg = cfg.get("drift", {})
+    drift_threshold = drift_cfg.get("threshold", 10) if isinstance(drift_cfg, dict) else 10
+    alerts = detect_drift(days=args.days, threshold=drift_threshold)
     if alerts:
         print(f"\n{'!'*60}")
         print("⚠️  DRIFT ALERTS")

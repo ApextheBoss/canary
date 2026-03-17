@@ -1,0 +1,29 @@
+# Canary configuration file
+# Copy to canary.yaml and customize
+
+# Providers to test (OpenRouter model identifiers)
+providers:
+  - openai/gpt-4o
+  - anthropic/claude-3.5-sonnet
+  - google/gemini-2.0-flash-thinking-exp
+
+# Drift detection settings
+drift:
+  threshold: 10        # Alert when score changes by this many points
+  window_days: 7       # Compare against this many days of history
+
+# Scheduling (for reference — actual schedule is in .github/workflows/)
+schedule:
+  cron: "0 0 * * *"    # Daily at midnight UTC
+
+# Dashboard settings
+dashboard:
+  host: "0.0.0.0"
+  port: 8000
+  auto_refresh_seconds: 60
+
+# Webhook notifications (or use environment variables)
+# webhooks:
+#   discord: "https://discord.com/api/webhooks/..."
+#   slack: "https://hooks.slack.com/services/..."
+#   generic: "https://your-endpoint.com/hook"
