@@ -780,6 +780,18 @@ Examples:
         help="Number of days for drift detection/comparison (default: 7)"
     )
     
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be tested without making any API calls"
+    )
+    
+    parser.add_argument(
+        "--prompts",
+        type=str,
+        help="Comma-separated prompt IDs to run (e.g., code-01,math-02)"
+    )
+    
     args = parser.parse_args()
     
     if args.compare:
@@ -798,12 +810,36 @@ Examples:
     if args.providers:
         providers = [p.strip() for p in args.providers.split(",")]
     
+    prompt_ids = None
+    if args.prompts:
+        prompt_ids = [p.strip() for p in args.prompts.split(",")]
+    
+    if args.dry_run:
+        with open(PROMPTS_PATH) as f:
+            all_prompts = json.load(f)
+        if prompt_ids:
+            all_prompts = [p for p in all_prompts if p["id"] in prompt_ids]
+        target_providers = providers or ["openai/gpt-4o", "anthropic/claude-3.5-sonnet"]
+        print(f"🐤 Canary — DRY RUN (no API calls)")
+        print(f"   Providers: {', '.join(target_providers)}")
+        print(f"   Prompts: {len(all_prompts)}")
+        print()
+        categories = {}
+        for p in all_prompts:
+            categories.setdefault(p["category"], []).append(p)
+        for cat, prompts_list in sorted(categories.items()):
+            print(f"  📂 {cat} ({len(prompts_list)} tests)")
+            for p in prompts_list:
+                print(f"     {p['id']}: {p['scoring']['type']} — {p['prompt'][:60]}...")
+        print(f"\n  Total: {len(all_prompts)} prompts × {len(target_providers)} providers = {len(all_prompts) * len(target_providers)} API calls")
+        sys.exit(0)
+    
     print(f"🐤 Canary — LLM Drift Monitor")
     print(f"   Run started: {datetime.now(timezone.utc).isoformat()}")
     print(f"   Providers: {', '.join(providers) if providers else 'all configured'}")
     print()
     
-    results = run_tests(providers=providers)
+    results = run_tests(providers=providers, prompts=prompt_ids)
     
     # Check for drift
     alerts = detect_drift(days=args.days)

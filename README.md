@@ -228,6 +228,12 @@ python runner.py --report
 # Compare two providers head-to-head
 python runner.py --compare openai/gpt-4o,anthropic/claude-3.5-sonnet
 
+# Dry run — see what would be tested, no API calls
+python runner.py --dry-run --providers openai/gpt-4o
+
+# Run specific prompts only
+python runner.py --prompts code-01,math-02 --providers openai/gpt-4o
+
 # Custom drift detection window
 python runner.py --days 14
 
