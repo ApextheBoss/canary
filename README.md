@@ -195,6 +195,7 @@ Features:
 - **30-day line chart** — historical score trends across providers
 - **Category bar chart** — side-by-side comparison of latest scores by category
 - **CSV export** — download historical data for external analysis
+- **Leaderboard** — ranked provider comparison at `/leaderboard`
 - **Auto-refresh** — live dashboard updates every 60 seconds
 - **Dynamic SVG badges** — embed live scores in your README
 - **JSON API** — `/api/summary`, `/api/history`, `/api/drift`, `/api/runs/latest`

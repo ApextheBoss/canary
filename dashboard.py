@@ -147,6 +147,48 @@ def api_compare(a: str = "", b: str = "", days: int = 7):
     return {"provider_a": a, "provider_b": b, "days": days, "categories": comparison}
 
 
+@app.get("/api/leaderboard")
+def api_leaderboard(days: int = 7):
+    """Ranked leaderboard of all providers by overall score."""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT provider,
+               ROUND(AVG(avg_score), 1) as overall_score,
+               ROUND(AVG(avg_latency_ms)) as avg_latency,
+               COUNT(DISTINCT date) as days_tested,
+               COUNT(DISTINCT category) as categories
+        FROM daily_scores
+        WHERE date >= date('now', ?)
+        GROUP BY provider
+        ORDER BY overall_score DESC
+    """, (f"-{days} days",)).fetchall()
+
+    # Per-category breakdown for each provider
+    cat_rows = conn.execute("""
+        SELECT provider, category, ROUND(AVG(avg_score), 1) as score
+        FROM daily_scores
+        WHERE date >= date('now', ?)
+        GROUP BY provider, category
+    """, (f"-{days} days",)).fetchall()
+    conn.close()
+
+    cat_map = {}
+    for r in cat_rows:
+        cat_map.setdefault(r["provider"], {})[r["category"]] = r["score"]
+
+    leaderboard = []
+    for i, r in enumerate(rows, 1):
+        leaderboard.append({
+            "rank": i,
+            "provider": r["provider"],
+            "overall_score": r["overall_score"],
+            "avg_latency": r["avg_latency"],
+            "days_tested": r["days_tested"],
+            "categories": cat_map.get(r["provider"], {}),
+        })
+    return leaderboard
+
+
 @app.get("/api/runs/latest")
 def api_latest_runs(limit: int = 50):
     """Latest individual test results."""
@@ -305,6 +347,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <h1>🐤 Canary</h1>
   <p class="subtitle">LLM Drift Monitor — Know when your AI provider silently degrades</p>
   <div class="toolbar">
+    <a href="/leaderboard">🏆 Leaderboard</a>
     <a href="/api/export.csv">📥 Export CSV</a>
     <button onclick="toggleRefresh()" id="refreshBtn">🔄 Auto-refresh: OFF</button>
     <div class="spacer"></div>
@@ -489,6 +532,103 @@ load();
 </script>
 </body>
 </html>"""
+
+
+LEADERBOARD_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🏆 Canary Leaderboard — LLM Provider Rankings</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+         background: #0d1117; color: #e6edf3; padding: 20px; }
+  #app { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 1.8rem; margin-bottom: 4px; }
+  .subtitle { color: #8b949e; margin-bottom: 24px; font-size: 0.95rem; }
+  .nav { margin-bottom: 20px; }
+  .nav a { color: #58a6ff; text-decoration: none; font-size: 0.9rem; }
+  .nav a:hover { text-decoration: underline; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: #161b22;
+          border: 1px solid #30363d; border-radius: 8px; overflow: hidden; }
+  th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #21262d; }
+  th { color: #8b949e; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; background: #0d1117; }
+  .rank { font-size: 1.3rem; font-weight: 700; width: 50px; text-align: center; }
+  .rank-1 { color: #ffd700; }
+  .rank-2 { color: #c0c0c0; }
+  .rank-3 { color: #cd7f32; }
+  .provider-name { font-weight: 600; font-size: 1rem; }
+  .score { font-size: 1.2rem; font-weight: 700; }
+  .good { color: #3fb950; }
+  .warn { color: #d29922; }
+  .bad { color: #f85149; }
+  .cat-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .cat-tag { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #21262d; }
+  .latency { color: #8b949e; font-size: 0.85rem; }
+  .controls { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; }
+  .controls select { background: #21262d; border: 1px solid #30363d; color: #e6edf3; padding: 6px 10px;
+    border-radius: 6px; font-size: 0.85rem; }
+  .controls label { color: #8b949e; font-size: 0.85rem; }
+  .updated { color: #8b949e; font-size: 0.8rem; margin-top: 16px; text-align: right; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="nav"><a href="/">← Back to Dashboard</a></div>
+  <h1>🏆 Leaderboard</h1>
+  <p class="subtitle">LLM providers ranked by quality score</p>
+  <div class="controls">
+    <label>Period:</label>
+    <select id="days" onchange="load()">
+      <option value="3">3 days</option>
+      <option value="7" selected>7 days</option>
+      <option value="14">14 days</option>
+      <option value="30">30 days</option>
+    </select>
+  </div>
+  <div id="content">Loading…</div>
+</div>
+<script>
+function scoreClass(s) { return s >= 85 ? 'good' : s >= 60 ? 'warn' : 'bad'; }
+function rankClass(r) { return r <= 3 ? `rank-${r}` : ''; }
+const medals = {1: '🥇', 2: '🥈', 3: '🥉'};
+
+async function load() {
+  const days = document.getElementById('days').value;
+  const data = await fetch(`/api/leaderboard?days=${days}`).then(r => r.json());
+  if (!data.length) { document.getElementById('content').innerHTML = '<p style="color:#8b949e;padding:40px;text-align:center">No data yet. Run some tests first!</p>'; return; }
+
+  const cats = [...new Set(data.flatMap(d => Object.keys(d.categories)))].sort();
+  let html = '<table><thead><tr><th>Rank</th><th>Provider</th><th>Score</th><th>Latency</th>';
+  for (const c of cats) html += `<th>${c}</th>`;
+  html += '</tr></thead><tbody>';
+
+  for (const d of data) {
+    html += `<tr>
+      <td class="rank ${rankClass(d.rank)}">${medals[d.rank] || d.rank}</td>
+      <td class="provider-name">${d.provider}</td>
+      <td class="score ${scoreClass(d.overall_score)}">${d.overall_score}</td>
+      <td class="latency">${d.avg_latency}ms</td>`;
+    for (const c of cats) {
+      const s = d.categories[c];
+      html += s != null ? `<td class="${scoreClass(s)}">${s}</td>` : '<td style="color:#484f58">—</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  html += `<p class="updated">Updated: ${new Date().toLocaleString()} · Averaging last ${days} days</p>`;
+  document.getElementById('content').innerHTML = html;
+}
+load();
+</script>
+</body>
+</html>"""
+
+
+@app.get("/leaderboard", response_class=HTMLResponse)
+def leaderboard():
+    return LEADERBOARD_HTML
 
 
 @app.get("/", response_class=HTMLResponse)
