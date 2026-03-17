@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- ⚙️ `canary.yaml` config file support — set default providers and drift thresholds without CLI flags
+- `canary.example.yaml` with all available options
+- `--config` CLI flag for custom config file path
+- `--dry-run` and `--prompts` flags for easier onboarding
+- 🏆 Leaderboard page + `/leaderboard` API endpoint
+- 🔒 `.env.example` + `SECURITY.md` for OSS launch polish
+
 ## v0.1.0 — 2026-03-16
 
 **First tagged release! 🎉**
