@@ -4,7 +4,12 @@ on:
   schedule:
     # Run daily at 00:00 UTC
     - cron: '0 0 * * *'
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      providers:
+        description: 'Comma-separated provider list (leave empty for defaults)'
+        required: false
+        default: ''
 
 jobs:
   test:
@@ -31,7 +36,8 @@ jobs:
         CANARY_DISCORD_WEBHOOK: ${{ secrets.CANARY_DISCORD_WEBHOOK }}
         CANARY_SLACK_WEBHOOK: ${{ secrets.CANARY_SLACK_WEBHOOK }}
       run: |
-        python runner.py --providers openai/gpt-4o,anthropic/claude-3.5-sonnet,google/gemini-2.0-flash-thinking-exp
+        PROVIDERS="${{ github.event.inputs.providers || 'openai/gpt-4o,anthropic/claude-3.5-sonnet,google/gemini-2.0-flash-thinking-exp' }}"
+        python runner.py --providers "$PROVIDERS"
     
     - name: Generate report
       run: |

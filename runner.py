@@ -792,7 +792,7 @@ def compare_providers(provider_a: str, provider_b: str, days: int = 7):
     conn.close()
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
         description="Canary — LLM Drift Monitor. Automated quality testing for AI models.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -947,3 +947,7 @@ Examples:
         pass
     except Exception as e:
         print(f"\n⚠️  Alert delivery failed: {e}")
+
+
+if __name__ == "__main__":
+    main()
