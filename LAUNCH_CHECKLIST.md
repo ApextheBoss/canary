@@ -22,12 +22,12 @@
 - [x] v0.1.0 tagged
 
 ## Launch Day TODO
-- [ ] Verify GitHub repo is public
-- [ ] Add repo description + topics on GitHub (llm, testing, drift-detection, quality, monitoring)
+- [x] Verify GitHub repo is public
+- [x] Add repo description + topics on GitHub (llm, testing, drift-detection, quality, monitoring)
 - [ ] Post Show HN
 - [ ] Tweet/social announcement
 - [ ] Consider adding a demo GIF/screenshot to README (run seed_demo.py + screenshot dashboard)
-- [ ] Set up GitHub Discussions for community feedback
+- [x] Set up GitHub Discussions for community feedback
 
 ## Post-Launch Ideas
 - [ ] PyPI package (`pip install canary-llm`)
