@@ -26,7 +26,7 @@
 - [x] Add repo description + topics on GitHub (llm, testing, drift-detection, quality, monitoring)
 - [ ] Post Show HN
 - [ ] Tweet/social announcement
-- [ ] Consider adding a demo GIF/screenshot to README (run seed_demo.py + screenshot dashboard)
+- [x] Consider adding a demo GIF/screenshot to README (run seed_demo.py + screenshot dashboard)
 - [x] Set up GitHub Discussions for community feedback
 
 ## Post-Launch Ideas

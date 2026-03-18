@@ -21,6 +21,16 @@ LLM providers update their models constantly. Sometimes these updates improve qu
 
 ---
 
+## Screenshots
+
+### Dashboard
+![Canary Dashboard](dashboard_screenshot.png)
+
+### Leaderboard
+![Canary Leaderboard](leaderboard_screenshot.png)
+
+---
+
 ## What It Does
 
 - 📊 **32 test prompts** across 8 categories (code, reasoning, math, instruction-following, consistency, safety, multilingual, RAG)
